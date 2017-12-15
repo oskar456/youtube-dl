@@ -100,6 +100,7 @@ from .megaphone import MegaphoneIE
 from .vzaar import VzaarIE
 from .channel9 import Channel9IE
 from .vshare import VShareIE
+from .seznamzpravy import SeznamZpravyIE
 
 
 class GenericIE(InfoExtractor):
@@ -1925,7 +1926,18 @@ class GenericIE(InfoExtractor):
                 'title': 'vl14062007715967',
                 'ext': 'mp4',
             }
-        }
+        },
+        {
+            # SeznamZpravy embed
+            'url': 'https://www.seznamzpravy.cz/clanek/chceme-lepsi-pondeli-vzdy-dame-slovo-obema-stranam-babisovi-i-okamurovi-prezidentovi-i-jeho-mluvcimu-40592',
+            'playlist_mincount': 1,
+            'info_dict': {
+                'id': 'chceme-lepsi-pondeli-vzdy-dame-slovo-obema-stranam-babisovi-i-okamurovi-prezidentovi-i-jeho-mluvcimu-40592',
+                'title': 'Chceme lepší pondělí! Vždy dáme slovo oběma stranám: Babišovi i Okamurovi, prezidentovi i jeho mluvčímu - Seznam Zprávy',
+            },
+            'add_ie': [SeznamZpravyIE.ie_key()],
+        },
+
         # {
         #     # TODO: find another test
         #     # http://schema.org/VideoObject
@@ -2882,6 +2894,13 @@ class GenericIE(InfoExtractor):
         if vshare_urls:
             return self.playlist_from_matches(
                 vshare_urls, video_id, video_title, ie=VShareIE.ie_key())
+
+        # Look for seznamzpravy.cz embeds
+        seznamzpravy_urls = SeznamZpravyIE._extract_urls(webpage)
+        if seznamzpravy_urls:
+            return self.playlist_from_matches(
+                    seznamzpravy_urls, video_id, video_title, ie=SeznamZpravyIE.ie_key())
+
 
         def merge_dicts(dict1, dict2):
             merged = {}
