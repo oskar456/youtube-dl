@@ -71,11 +71,12 @@ class SeznamZpravyIE(InfoExtractor):
         params = compat_parse_qs(compat_urllib_parse_urlparse(url).query)
         src = params['src'][0]
         video_id = params.get('contentId', [_raw_id(src)])[0]
+        src += 'spl2,2,%s' % (params['splVersion'][0])
 
         return {
             'id': video_id,
             'title': params['title'][0],
-            'formats': self._extract_sdn_formats(src + 'spl2,2,VOD', video_id),
+            'formats': self._extract_sdn_formats(src, video_id),
         }
 
 
@@ -121,13 +122,17 @@ class SeznamZpravyArticleIE(InfoExtractor):
             'id': caption.get('uid'),
             'title': caption.get('title'),
             'src': src_url,
+            'splVersion': 'EVENT' if 'liveStreamUrl' in caption else 'VOD',
         }
 
-    def _extract_content(self, api_data):
+    def _extract_content(self, api_data, article_id):
         entries = []
         for item in api_data.get('content', []):
             media = item.get('properties', {}).get('media', {})
-            src_url = media.get('video', {}).get('sdn')
+            if 'liveStreamUrl' in media:
+                src_url = self._download_json(media['liveStreamUrl'], article_id)['Location']
+            else:
+                src_url = media.get('video', {}).get('sdn')
             title = media.get('title')
             if not src_url or not title:
                 continue
@@ -136,6 +141,7 @@ class SeznamZpravyArticleIE(InfoExtractor):
                 'id': media.get('uid'),
                 'title': title,
                 'src': src_url,
+                'splVersion': 'EVENT' if 'liveStreamUrl' in media else 'VOD',
             })
 
         return entries
@@ -145,6 +151,7 @@ class SeznamZpravyArticleIE(InfoExtractor):
         url = update_url_query('https://www.seznam.cz/zpravy/iframe/player', {
             'src': info_dict['src'],
             'title': info_dict['title'],
+            'splVersion': info_dict['splVersion'],
             'contentId': video_id,
             'serviceName': 'Seznam Zprávy',
         })
@@ -155,7 +162,7 @@ class SeznamZpravyArticleIE(InfoExtractor):
         api_data = self._download_json(self._API_URL + 'v1/documents/' + article_id, article_id)
 
         caption = self._extract_caption(api_data, article_id)
-        content = self._extract_content(api_data)
+        content = self._extract_content(api_data, article_id)
 
         if caption and not content:
             return self._iframe_result(caption)
